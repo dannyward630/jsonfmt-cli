@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { formatJson, minifyJson, validateJson, parseIndent } from "../src/index.js";
+import { readFileSync, writeFileSync } from "node:fs";
+import { formatJson, minifyJson, validateJson, parseIndent, isFormatted } from "../src/index.js";
 
 const args = process.argv.slice(2);
 
@@ -17,6 +17,8 @@ Options:
   --sort-keys    Sort object keys
   --validate     Validate only, print "valid" or error
   --minify       Minify output
+  --check        Exit 1 if input is not already formatted
+  --output=FILE  Write result to FILE instead of stdout
   -h, --help     Show this help
 `);
   process.exit(0);
@@ -31,6 +33,9 @@ const sortKeys = args.includes("--sort-keys");
 const compact = args.includes("--compact");
 const minify = args.includes("--minify");
 const validate = args.includes("--validate");
+const check = args.includes("--check");
+const outputArg = args.find((a) => a.startsWith("--output="));
+const outputFile = outputArg ? outputArg.split("=")[1] : null;
 
 try {
   if (validate) {
@@ -38,10 +43,20 @@ try {
     if (r.ok) { console.log("valid"); process.exit(0); }
     else { console.error(`error: ${r.error}`); process.exit(1); }
   }
+  if (check) {
+    if (isFormatted(text, { indent, sortKeys, compact })) { process.exit(0); }
+    else { console.error("error: not formatted"); process.exit(1); }
+  }
+  let result;
   if (minify || compact) {
-    console.log(minify ? minifyJson(text) : formatJson(text, { compact: true, sortKeys }));
+    result = minify ? minifyJson(text) : formatJson(text, { compact: true, sortKeys });
   } else {
-    console.log(formatJson(text, { indent, sortKeys }));
+    result = formatJson(text, { indent, sortKeys });
+  }
+  if (outputFile) {
+    writeFileSync(outputFile, result + "\n");
+  } else {
+    console.log(result);
   }
 } catch (err) {
   console.error(`error: ${err.message}`);

@@ -7,6 +7,7 @@ import {
   validateJson,
   sortKeys,
   parseIndent,
+  isFormatted,
 } from "../src/index.js";
 
 test("formatJson pretty-prints with 2-space indent by default", () => {
@@ -67,4 +68,19 @@ test("parseIndent accepts numbers and defaults", () => {
   assert.equal(parseIndent("4"), 4);
   assert.equal(parseIndent("0"), 2);
   assert.equal(parseIndent("abc"), 2);
+});
+
+test("isFormatted returns true when input already formatted", () => {
+  const src = '{\n  "a": 1\n}';
+  assert.equal(isFormatted(src), true);
+});
+
+test("isFormatted returns false when input is minified", () => {
+  assert.equal(isFormatted('{"a":1}'), false);
+});
+
+test("isFormatted respects sortKeys option", () => {
+  const src = '{\n  "a": 1,\n  "b": 2\n}';
+  assert.equal(isFormatted(src, { sortKeys: true }), true);
+  assert.equal(isFormatted('{"b":2,"a":1}', { sortKeys: true }), false);
 });

@@ -48,3 +48,13 @@ export function minifyJson(text) {
   const data = parseJson(text);
   return JSON.stringify(data);
 }
+
+export function isFormatted(text, options = {}) {
+  let formatted;
+  try {
+    formatted = formatJson(text, options);
+  } catch {
+    return false;
+  }
+  return text === formatted || text === formatted + "\n";
+}
