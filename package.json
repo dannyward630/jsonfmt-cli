@@ -1,0 +1,12 @@
+{
+  "name": "@yunaremaia/jsonfmt-cli",
+  "version": "0.1.0",
+  "description": "Lightweight CLI to pretty-print, validate and minify JSON (no dependencies).",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": { "jsonfmt": "bin/jsonfmt.js" },
+  "scripts": { "test": "node --test", "lint": "node --check src/index.js && node --check bin/jsonfmt.js" },
+  "engines": { "node": ">=18" },
+  "keywords": ["json", "pretty-print", "cli", "formatter", "validate"],
+  "license": "MIT"
+}
