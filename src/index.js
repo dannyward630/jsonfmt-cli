@@ -12,7 +12,19 @@ export function sortKeys(value) {
   if (value && typeof value === "object") {
     const out = {};
     for (const key of Object.keys(value).sort()) {
-      out[key] = sortKeys(value[key]);
+      const sorted = sortKeys(value[key]);
+      if (key === "__proto__") {
+        // Plain assignment would hit the Object.prototype setter and drop
+        // the key; define it as an own data property instead (see #12).
+        Object.defineProperty(out, key, {
+          value: sorted,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      } else {
+        out[key] = sorted;
+      }
     }
     return out;
   }

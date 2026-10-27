@@ -82,6 +82,27 @@ test("sortKeys recursively sorts nested keys", () => {
   assert.deepEqual(Object.keys(out.b), ["c", "d"]);
 });
 
+test("sortKeys preserves __proto__ as an own property (no data loss)", () => {
+  const input = JSON.parse('{"b":1,"__proto__":{"polluted":true}}');
+  const out = sortKeys(input);
+  assert.equal(Object.hasOwn(out, "__proto__"), true);
+  assert.deepEqual(out.__proto__, { polluted: true });
+});
+
+test("sortKeys does not pollute Object.prototype", () => {
+  const input = JSON.parse('{"__proto__":{"polluted":true}}');
+  sortKeys(input);
+  assert.equal(Object.hasOwn(Object.prototype, "polluted"), false);
+  assert.equal({}.polluted, undefined);
+});
+
+test("formatJson with sortKeys round-trips __proto__ keys", () => {
+  const out = formatJson('{"b":1,"__proto__":{"x":1}}', { sortKeys: true });
+  const back = JSON.parse(out);
+  assert.equal(Object.hasOwn(back, "__proto__"), true);
+  assert.deepEqual(back.__proto__, { x: 1 });
+});
+
 test("parseIndent accepts numbers and defaults", () => {
   assert.equal(parseIndent(undefined), 2);
   assert.equal(parseIndent("4"), 4);
