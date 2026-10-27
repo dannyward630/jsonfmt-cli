@@ -1,5 +1,15 @@
 #!/usr/bin/env node
-import { closeSync, constants, ftruncateSync, lstatSync, openSync, readFileSync, writeFileSync, writeSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  ftruncateSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { formatJson, minifyJson, validateJson, parseIndent, isFormatted } from "../src/index.js";
 
 const args = process.argv.slice(2);
@@ -38,6 +48,58 @@ const check = args.includes("--check");
 const outputArg = args.find((a) => a.startsWith("--output="));
 const outputFile = outputArg ? outputArg.split("=")[1] : null;
 
+function writeOutputFile(file, content) {
+  let pathStat;
+  try {
+    pathStat = lstatSync(file);
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+  }
+
+  if (pathStat?.isSymbolicLink()) {
+    throw new Error("refusing to write through symlink");
+  }
+  if (pathStat && !pathStat.isFile()) {
+    throw new Error("refusing to write to non-regular output");
+  }
+
+  const noFollow = constants.O_NOFOLLOW ?? 0;
+  const flags = pathStat
+    ? constants.O_WRONLY | noFollow
+    : constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollow;
+  const fd = openSync(file, flags, 0o666);
+
+  try {
+    const fileStat = fstatSync(fd);
+    if (!fileStat.isFile()) {
+      throw new Error("refusing to write to non-regular output");
+    }
+    if (
+      pathStat &&
+      (fileStat.dev !== pathStat.dev || fileStat.ino !== pathStat.ino)
+    ) {
+      throw new Error("output file changed while opening");
+    }
+
+    const currentPathStat = lstatSync(file);
+    if (currentPathStat.isSymbolicLink()) {
+      throw new Error("refusing to write through symlink");
+    }
+    if (
+      !currentPathStat.isFile() ||
+      currentPathStat.dev !== fileStat.dev ||
+      currentPathStat.ino !== fileStat.ino
+    ) {
+      throw new Error("output file changed while opening");
+    }
+
+    ftruncateSync(fd, 0);
+    writeFileSync(fd, content);
+  } finally {
+    closeSync(fd);
+  }
+}
+
 let inputFd;
 try {
   if (inPlace && !fileArg) throw new Error("--in-place requires an input file");
@@ -72,7 +134,7 @@ try {
     }
     ftruncateSync(inputFd, output.length);
   } else if (outputFile) {
-    writeFileSync(outputFile, result + "\n");
+    writeOutputFile(outputFile, result + "\n");
   } else {
     console.log(result);
   }
