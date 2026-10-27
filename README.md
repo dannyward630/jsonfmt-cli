@@ -21,6 +21,9 @@ printing it, preserving its permissions. It requires a file, refuses symbolic
 links, and cannot be combined with `--output`, `--check` or `--validate`.
 Invalid JSON leaves the input unchanged.
 
+Indentation defaults to 2 spaces. Values above 10 for `--indent` are capped at
+10 spaces, matching JavaScript's JSON serializer limit.
+
 ## Development
 
 ```bash

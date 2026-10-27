@@ -10,7 +10,14 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
-import { formatJson, minifyJson, validateJson, parseIndent, isFormatted } from "../src/index.js";
+import {
+  formatJson,
+  minifyJson,
+  validateJson,
+  parseIndent,
+  isFormatted,
+  MAX_INDENT,
+} from "../src/index.js";
 
 const args = process.argv.slice(2);
 
@@ -22,7 +29,7 @@ Usage:
   cat file.json | jsonfmt [options]
 
 Options:
-  --indent=N     Indentation spaces (default 2)
+  --indent=N     Indentation spaces (default 2, max ${MAX_INDENT})
   --compact      Minify output (single line)
   --sort-keys    Sort object keys
   --validate     Validate only, print "valid" or error

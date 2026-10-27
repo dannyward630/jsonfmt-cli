@@ -110,6 +110,24 @@ test("parseIndent accepts numbers and defaults", () => {
   assert.equal(parseIndent("abc"), 2);
 });
 
+test("parseIndent caps large values at 10 spaces", () => {
+  assert.equal(parseIndent("1000000"), 10);
+  assert.equal(parseIndent(undefined, 1000000), 10);
+});
+
+test("formatJson caps large indentation widths", () => {
+  const out = formatJson('{"a":1}', { indent: 1000000 });
+  assert.equal(out, `{\n${" ".repeat(10)}"a": 1\n}`);
+});
+
+test("CLI help documents the indentation limit", () => {
+  const result = spawnSync(process.execPath, [cliPath, "--help"], {
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /--indent=N\s+Indentation spaces \(default 2, max 10\)/);
+});
+
 test("isFormatted returns true when input already formatted", () => {
   const src = '{\n  "a": 1\n}';
   assert.equal(isFormatted(src), true);

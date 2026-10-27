@@ -1,10 +1,13 @@
 // jsonfmt-cli: pretty-print, validate and minify JSON (no dependencies).
 
+export const MAX_INDENT = 10;
+
 export function parseIndent(raw, def = 2) {
-  if (raw === undefined || raw === null || raw === "") return def;
+  const fallback = Math.min(def, MAX_INDENT);
+  if (raw === undefined || raw === null || raw === "") return fallback;
   const n = Number(raw);
-  if (!Number.isFinite(n) || n <= 0) return def;
-  return Math.floor(n);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.min(Math.floor(n), MAX_INDENT);
 }
 
 export function sortKeys(value) {
