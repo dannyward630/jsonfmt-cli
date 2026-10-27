@@ -1,5 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import {
+  lstatSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   formatJson,
@@ -9,6 +21,13 @@ import {
   parseIndent,
   isFormatted,
 } from "../src/index.js";
+
+const cliPath = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "bin",
+  "jsonfmt.js",
+);
 
 test("formatJson pretty-prints with 2-space indent by default", () => {
   const out = formatJson('{"b":2,"a":1}');
@@ -83,4 +102,56 @@ test("isFormatted respects sortKeys option", () => {
   const src = '{\n  "a": 1,\n  "b": 2\n}';
   assert.equal(isFormatted(src, { sortKeys: true }), true);
   assert.equal(isFormatted('{"b":2,"a":1}', { sortKeys: true }), false);
+});
+
+test("CLI writes output to new and existing regular files", () => {
+  const dir = mkdtempSync(join(tmpdir(), "jsonfmt-cli-"));
+  try {
+    const input = join(dir, "input.json");
+    const existingOutput = join(dir, "existing.json");
+    const newOutput = join(dir, "new.json");
+    writeFileSync(input, '{"b":2,"a":1}');
+    writeFileSync(existingOutput, "old contents that should be replaced");
+
+    for (const output of [existingOutput, newOutput]) {
+      const result = spawnSync(
+        process.execPath,
+        [cliPath, input, `--output=${output}`],
+        { encoding: "utf8" },
+      );
+
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(
+        readFileSync(output, "utf8"),
+        '{\n  "b": 2,\n  "a": 1\n}\n',
+      );
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLI refuses to write through a symlink output", () => {
+  const dir = mkdtempSync(join(tmpdir(), "jsonfmt-cli-"));
+  try {
+    const input = join(dir, "input.json");
+    const target = join(dir, "target.json");
+    const output = join(dir, "output.json");
+    writeFileSync(input, '{"overwritten":true}');
+    writeFileSync(target, "preserve this target");
+    symlinkSync(target, output, "file");
+
+    const result = spawnSync(
+      process.execPath,
+      [cliPath, input, `--output=${output}`],
+      { encoding: "utf8" },
+    );
+
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /refusing to write through symlink/i);
+    assert.equal(readFileSync(target, "utf8"), "preserve this target");
+    assert.equal(lstatSync(output).isSymbolicLink(), true);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
